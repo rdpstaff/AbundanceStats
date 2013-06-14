@@ -1,0 +1,12 @@
+#*#
+*~
+*.class
+
+.svn
+nbproject
+build/
+build.xml
+dist/
+manifest.mf
+rarefaction_test/
+test_cluster/
