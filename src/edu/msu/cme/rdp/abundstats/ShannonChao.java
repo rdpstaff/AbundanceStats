@@ -7,6 +7,7 @@ import edu.msu.cme.pyro.cluster.utils.Cluster;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.Set;
 import java.util.Map;
@@ -110,7 +111,8 @@ public class ShannonChao {
      *
      *
      * @param parser
-     * @return Map of sample names to ShannonChaoResults, one for each cutoff in the cluster file
+     * @return Map of sample names to ShannonChaoResults, one for each cutoff in
+     * the cluster file
      */
     public static Map<ClusterSample, List<ShannonChaoResult>> process(RDPClustParser parser) throws IOException {
         Map<ClusterSample, List<ShannonChaoResult>> ret = new LinkedHashMap();
@@ -120,7 +122,7 @@ public class ShannonChao {
         }
 
         Cutoff cutoff;
-        while((cutoff = parser.readNextCutoff()) != null) {
+        while ((cutoff = parser.readNextCutoff()) != null) {
             for (ClusterSample sample : parser.getClusterSamples()) {
                 List<Cluster> sampleClusters = cutoff.getClusters().get(sample.getName());
 
@@ -128,9 +130,9 @@ public class ShannonChao {
                 clusterSizeToCounts.put(1, 0);
                 clusterSizeToCounts.put(2, 0);
 
-                for(Iterator<Cluster> iterator = sampleClusters.listIterator();iterator.hasNext();) {
+                for (Iterator<Cluster> iterator = sampleClusters.listIterator(); iterator.hasNext();) {
                     Cluster c = iterator.next();
-                    if(c.getNumberOfSeqs() == 0) {
+                    if (c.getNumberOfSeqs() == 0) {
                         iterator.remove();
                     }
                 }
@@ -206,11 +208,44 @@ public class ShannonChao {
         return new ShannonResult(H, varH, Evenness);
     }
 
+    public static void computeShannonChao1(List<File> clusterFiles, PrintStream out) throws IOException {
+        RDPClustParser parser;
+        Map<ClusterSample, List<ShannonChaoResult>> results;
+
+        out.println("sampleID\tdistance\tN\tclusters\tchao\tLCI95\tUCI95\tH'\tvarH\tE");
+        Set<String> seenSampleNames = new LinkedHashSet();
+        for (File clusterFile : clusterFiles) {
+
+            parser = new RDPClustParser(clusterFile);
+            results = ShannonChao.process(parser);
+            parser.close();
+
+            for (ClusterSample sample : results.keySet()) {
+                if (seenSampleNames.contains(sample.getName())) {
+                    throw new IOException("Sample name " + sample.getName() + " appears more than once");
+                }
+
+                seenSampleNames.add(sample.getName());
+
+                for (ShannonChaoResult result : results.get(sample)) {
+                    out.println(sample.getName() + "\t" + result.getDistance() + "\t" + sample.getSeqs() + "\t" + result.getNumClusters() + "\t"
+                            + dFormat.format(result.getChaoResult().getChao()) + "\t"
+                            + dFormat.format(result.getChaoResult().getLCI95()) + "\t"
+                            + dFormat.format(result.getChaoResult().getUCI95()) + "\t"
+                            + dFormat.format(result.getShannonResult().getH()) + "\t"
+                            + dFormat.format(result.getShannonResult().getVarH()) + "\t"
+                            + dFormat.format(result.getShannonResult().getEvenness()));
+                }
+
+            }
+        }
+
+    }
+
     /**
      *
-     * @param args
-     * arg1 = directory that contains one or more cluster file
-     * arg2 = output file
+     * @param args arg1 = directory that contains one or more cluster file arg2
+     * = output file
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
@@ -223,10 +258,10 @@ public class ShannonChao {
         File dir = new File(args[0]);
         File outfile = new File(args[1]);
         File[] childFiles;
-        if(dir.isDirectory()) {
+        if (dir.isDirectory()) {
             childFiles = dir.listFiles();
-        } else if(dir.exists()) {
-            childFiles = new File[] { dir };
+        } else if (dir.exists()) {
+            childFiles = new File[]{dir};
         } else {
             throw new IOException(dir.getAbsolutePath() + " doesn't exist");
         }
@@ -244,7 +279,7 @@ public class ShannonChao {
                     parser.close();
 
                     for (ClusterSample sample : results.keySet()) {
-                        if(seenSampleNames.contains(sample.getName())) {
+                        if (seenSampleNames.contains(sample.getName())) {
                             throw new IOException("Sample name " + sample.getName() + " appears more than once");
                         }
 

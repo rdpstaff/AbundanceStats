@@ -4,7 +4,6 @@
 lib/
 .svn
 build/
-build.xml
 dist/
 rarefaction_test/
 test_cluster/
