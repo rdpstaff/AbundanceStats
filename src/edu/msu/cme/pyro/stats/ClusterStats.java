@@ -4,6 +4,7 @@
  */
 package edu.msu.cme.pyro.stats;
 
+import edu.msu.cme.pyro.cluster.io.ClusterToBiom;
 import edu.msu.cme.pyro.cluster.io.RDPClustParser;
 import edu.msu.cme.pyro.cluster.io.RDPClustParser.ClusterSample;
 import edu.msu.cme.pyro.cluster.io.RDPClustParser.Cutoff;
@@ -74,6 +75,10 @@ public class ClusterStats {
     }
 
     public static void writeStats(File outDir, List<File> clusterFiles) throws IOException {
+        writeStats(outDir, clusterFiles, true);
+    }
+    
+    public static void writeStats(File outDir, List<File> clusterFiles, boolean outputBiom) throws IOException {
 
         for (File clusterFile : clusterFiles) {
             RDPClustParser parser = new RDPClustParser(clusterFile);
@@ -95,8 +100,17 @@ public class ClusterStats {
                     }
                     otuCounts.get(sample).put(cutoff.getCutoff(), otus);
                 }
+                // if outBiom is true
+                if ( outputBiom){                
+                    File outFile = new File(outDir, clusterFile.getName() + "_" + cutoff.getCutoff() + ".biom");
+                    PrintStream out = new PrintStream(outFile);
+                    try {
+                        ClusterToBiom.writeCutoff(cutoff, out);
+                    } finally {
+                        out.close();
+                    }                
+                }
             }
-
 
             for (ClusterSample sample : parser.getClusterSamples()) {
                 File statOutFile = new File(outDir, clusterFile.getName() + "_" + sample.getName() + "_otus.txt");
@@ -104,6 +118,7 @@ public class ClusterStats {
                 int totalSeqs = sample.getSeqs();
                 ClusterStats.writeStats(statOutFile, otuChartOutFile, otuCounts.get(sample), totalSeqs);
             }
+                    
             parser.close();
         }
     }
